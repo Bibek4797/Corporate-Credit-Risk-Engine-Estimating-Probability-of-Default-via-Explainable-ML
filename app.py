@@ -2,7 +2,7 @@
 CreditRiskEngine — Quantitative Credit Risk & Underwriting Engine
 ==================================================================
 A production-grade Streamlit application exposing the complete data science
-workflow: CSV upload → target definition → feature selection → modelling
+workflow: CSV upload → EDA → target definition → feature selection → modelling
 → diagnostics → explainability & stress testing.
 """
 
@@ -370,13 +370,14 @@ rwa_value = float(basel_metrics["RWA"])
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 5 MAIN TABS
+# 6 MAIN WORKSPACE TABS
 # ─────────────────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab_eda, tab2, tab3, tab4, tab5 = st.tabs([
     "📊 IRB Calculator",
+    "📈 Exploratory Data Analysis",
     "🔄 Target Definition",
     "🔍 Feature Selection",
-    "📈 Model Diagnostics",
+    "📉 Model Diagnostics",
     "💡 Explainability & Stress",
 ])
 
@@ -462,7 +463,171 @@ with tab1:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 2 — Target Definition: Roll Rates & Vintage Analysis
+# TAB 2 — Exploratory Data Analysis & Class Balance
+# ═════════════════════════════════════════════════════════════════════════════
+with tab_eda:
+    st.markdown('<div class="section-title">Exploratory Data Analysis & Class Balance</div>', unsafe_allow_html=True)
+
+    sdf = pipe["static_df"].copy()
+    target_col = "default_label"
+    n_total = len(sdf)
+    n_default = int(sdf[target_col].sum()) if target_col in sdf.columns else 0
+    n_non_default = n_total - n_default
+    default_rate = (n_default / n_total) * 100 if n_total > 0 else 0.0
+
+    # Top Overview Metric Cards
+    ed1, ed2, ed3, ed4 = st.columns(4)
+    with ed1:
+        st.markdown(f"""
+        <div class="metric-card-clean">
+          <div class="label">Total Accounts</div>
+          <div class="val-text" style="color:#3b82f6">{n_total:,}</div>
+          <div class="sub">Portfolio Size</div>
+        </div>""", unsafe_allow_html=True)
+    with ed2:
+        st.markdown(f"""
+        <div class="metric-card-clean">
+          <div class="label">Non-Default (Goods)</div>
+          <div class="val-text" style="color:#10b981">{n_non_default:,}</div>
+          <div class="sub">{100-default_rate:.1f}% of total</div>
+        </div>""", unsafe_allow_html=True)
+    with ed3:
+        st.markdown(f"""
+        <div class="metric-card-clean">
+          <div class="label">Default (Bads)</div>
+          <div class="val-text" style="color:#ef4444">{n_default:,}</div>
+          <div class="sub">{default_rate:.1f}% of total</div>
+        </div>""", unsafe_allow_html=True)
+    with ed4:
+        st.markdown(f"""
+        <div class="metric-card-clean">
+          <div class="label">Class Balance Ratio</div>
+          <div class="val-text" style="color:#f59e0b">1 : {int(n_non_default/max(n_default,1))}</div>
+          <div class="sub">{"Imbalanced" if default_rate < 15 else "Balanced"}</div>
+        </div>""", unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Class Imbalance & Feature Correlation Heatmap row
+    col_bal, col_corr = st.columns(2)
+
+    with col_bal:
+        st.markdown('<div class="section-title">⚖️ Target Class Distribution</div>', unsafe_allow_html=True)
+        counts_df = pd.DataFrame({
+            "Class": ["Good (Non-Default)", "Bad (Default)"],
+            "Count": [n_non_default, n_default]
+        })
+        fig_donut = px.pie(
+            counts_df, names="Class", values="Count",
+            hole=0.5,
+            color="Class",
+            color_discrete_map={"Good (Non-Default)": "#10b981", "Bad (Default)": "#ef4444"},
+            title=f"Class Balance (Default Rate = {default_rate:.1f}%)"
+        )
+        fig_donut.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font_color="white", height=350
+        )
+        st.plotly_chart(fig_donut, use_container_width=True)
+
+        imb_status = "severely imbalanced" if default_rate < 5 else ("moderately imbalanced" if default_rate < 15 else "balanced")
+        st.markdown(
+            f'<div class="rationale-box">📌 <b>Data Health Assessment:</b> Dataset has a default rate of '
+            f'<b>{default_rate:.1f}%</b> ({imb_status}). Imbalances are handled via Weight of Evidence (WoE) '
+            f'binning and post-hoc Isotonic Probability Calibration to ensure accurate risk ranking and un-biased Expected Loss calculations.</div>',
+            unsafe_allow_html=True
+        )
+
+    with col_corr:
+        st.markdown('<div class="section-title">🔥 Feature Correlation Heatmap</div>', unsafe_allow_html=True)
+        num_cols = [c for c in sdf.select_dtypes(include=[np.number]).columns if c not in ["loan_id"]]
+        corr_matrix = sdf[num_cols].corr()
+        fig_corr = px.imshow(
+            corr_matrix,
+            text_auto=".2f",
+            color_continuous_scale="RdBu_r",
+            title="Pearson Correlation Matrix",
+            aspect="auto"
+        )
+        fig_corr.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font_color="white", height=350
+        )
+        st.plotly_chart(fig_corr, use_container_width=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Bivariate Feature Analysis vs Target
+    st.markdown('<div class="section-title">🔎 Feature Variance vs Default Target</div>', unsafe_allow_html=True)
+    avail_features = [c for c in sdf.columns if c not in ["loan_id", "default_label", "ead", "lgd", "macro_instrument"]]
+
+    selected_feat = st.selectbox("Select Feature to Analyze:", avail_features, index=0)
+
+    f_col1, f_col2 = st.columns(2)
+
+    with f_col1:
+        # Distribution by Target (Goods vs Bads)
+        if sdf[selected_feat].dtype == "object" or sdf[selected_feat].dtype.name == "category":
+            fig_feat = px.histogram(
+                sdf, x=selected_feat, color=target_col,
+                barmode="group",
+                color_discrete_map={0: "#3b82f6", 1: "#ef4444"},
+                title=f"{selected_feat} Distribution by Default Status (0=Good, 1=Bad)",
+                labels={target_col: "Default Status"}
+            )
+        else:
+            fig_feat = px.box(
+                sdf, x=target_col, y=selected_feat,
+                color=target_col,
+                color_discrete_map={0: "#3b82f6", 1: "#ef4444"},
+                title=f"{selected_feat} Distribution by Default Status (0=Good, 1=Bad)"
+            )
+        fig_feat.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font_color="white", height=380
+        )
+        st.plotly_chart(fig_feat, use_container_width=True)
+
+    with f_col2:
+        # Default Rate by Feature Quantile / Category
+        if sdf[selected_feat].dtype == "object" or sdf[selected_feat].dtype.name == "category":
+            binned_df = sdf.groupby(selected_feat)[target_col].agg(["count", "mean"]).reset_index()
+            binned_df["Default Rate (%)"] = binned_df["mean"] * 100
+            fig_rate = px.bar(
+                binned_df, x=selected_feat, y="Default Rate (%)",
+                color="Default Rate (%)", color_continuous_scale="Reds",
+                title=f"Default Rate (%) across {selected_feat} Categories",
+                text_auto=".1f"
+            )
+        else:
+            sdf_temp = sdf.copy()
+            try:
+                sdf_temp["_qbin"] = pd.qcut(sdf_temp[selected_feat], q=5, duplicates="drop").astype(str)
+            except Exception:
+                sdf_temp["_qbin"] = pd.cut(sdf_temp[selected_feat], bins=5).astype(str)
+            binned_df = sdf_temp.groupby("_qbin")[target_col].agg(["count", "mean"]).reset_index()
+            binned_df["Default Rate (%)"] = binned_df["mean"] * 100
+            binned_df.rename(columns={"_qbin": f"{selected_feat} Quantile Bin"}, inplace=True)
+            fig_rate = px.bar(
+                binned_df, x=f"{selected_feat} Quantile Bin", y="Default Rate (%)",
+                color="Default Rate (%)", color_continuous_scale="Reds",
+                title=f"Default Rate (%) across {selected_feat} Quantile Bins",
+                text_auto=".1f"
+            )
+
+        fig_rate.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font_color="white", height=380
+        )
+        st.plotly_chart(fig_rate, use_container_width=True)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TAB 3 — Target Definition: Roll Rates & Vintage Analysis
 # ═════════════════════════════════════════════════════════════════════════════
 with tab2:
     col_r, col_v = st.columns(2)
@@ -521,7 +686,7 @@ with tab2:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 3 — Feature Selection Report
+# TAB 4 — Feature Selection Report
 # ═════════════════════════════════════════════════════════════════════════════
 with tab3:
     st.markdown('<div class="section-title">Feature Selection Report — IV & VIF Elimination</div>', unsafe_allow_html=True)
@@ -588,7 +753,7 @@ with tab3:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 4 — Model Diagnostics: KS & PSI
+# TAB 5 — Model Diagnostics: KS & PSI
 # ═════════════════════════════════════════════════════════════════════════════
 with tab4:
     st.markdown('<div class="section-title">Model Performance Diagnostics</div>', unsafe_allow_html=True)
@@ -690,7 +855,7 @@ with tab4:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# TAB 5 — Explainability & Stress Testing
+# TAB 6 — Explainability & Stress Testing
 # ═════════════════════════════════════════════════════════════════════════════
 with tab5:
     col_shap, col_stress = st.columns([3, 2])
