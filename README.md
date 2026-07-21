@@ -1,6 +1,6 @@
 # CreditRiskEngine: Basel III Compliant Risk Modeling & Explainability
 
-`CreditRiskEngine` is an end-to-end, production-grade credit risk modeling and explainability pipeline built to comply with Basel III regulatory frameworks. The system automates credit data ingestion, custom CSV upload, statistical and econometric feature selection, machine learning model training (Logistic Regression, XGBoost, PyTorch Neural Network), probability calibration, and stress testing. It exposes these components through an interactive 5-tab Streamlit dashboard.
+`CreditRiskEngine` is an end-to-end, production-grade credit risk modeling and explainability pipeline built to comply with Basel III regulatory frameworks. The system is provided as a pre-executed **Jupyter Notebook ([`CreditRiskEngine.ipynb`](file:///c:/Users/BIBEK/OneDrive/Desktop/credit%20risk%20modelling/CreditRiskEngine/CreditRiskEngine.ipynb))** trained on institutional credit datasets (`loan_portfolio.csv`, `vintage_analysis.csv`, `macro_stress_scenarios.csv`), featuring pre-rendered plots, charts, tables, and execution logs for immediate visualization on GitHub, alongside a modular 6-tab Streamlit dashboard (`app.py`).
 
 ---
 
@@ -22,18 +22,22 @@ Under the **Basel III framework**, financial institutions use the **Internal Rat
 
 ```
 CreditRiskEngine/
-├── config.py            # Dataclass for VIF=5.0, IV=0.02, performance window, etc.
-├── requirements.txt     # Complete Python dependencies
-├── README.md            # Technical documentation & setup guide
-├── validate_pipeline.py # Comprehensive 8-step backend test suite
+├── CreditRiskEngine.ipynb  # Main Executed Jupyter Notebook with pre-rendered plots & metrics
+├── loan_portfolio.csv      # Institutional loan portfolio (50,000 corporate/retail accounts)
+├── vintage_analysis.csv    # Cohort vintage default rates (2,162 monthly records)
+├── macro_stress_scenarios.csv # Macroeconomic Downturn Scenarios & Shock Impact
+├── config.py               # Dataclass for VIF=5.0, IV=0.02, performance window, etc.
+├── requirements.txt        # Complete Python dependencies
+├── README.md               # Technical documentation & setup guide
+├── validate_pipeline.py    # Comprehensive 8-step backend test suite
 ├── src/
 │   ├── __init__.py
-│   ├── data_prep.py     # DataOrchestrator: CSV upload, Roll Rates, Vintage, Reject Inference
-│   ├── econometrics.py   # EconometricEngine: WoE/IV, VIF=5.0 filter, OLS/WLS/2SLS auto-selection
-│   ├── models.py         # RiskModels: Logistic Regression, XGBoost, PyTorch MLP, LGD, EAD
-│   ├── evaluate.py       # RiskEvaluator: KS-Statistic, PSI data drift, Basel III EL/RWA
-│   └── explain.py        # ShapExplainer: Unified SHAP local explanations across all 3 models
-└── app.py               # Streamlit 5-Tab Dashboard & Underwriting Simulator
+│   ├── data_prep.py        # DataOrchestrator: CSV upload, Roll Rates, Vintage, Reject Inference
+│   ├── econometrics.py      # EconometricEngine: WoE/IV, VIF=5.0 filter, OLS/WLS/2SLS auto-selection
+│   ├── models.py            # RiskModels: Logistic Regression, XGBoost, PyTorch MLP, LGD, EAD
+│   ├── evaluate.py          # RiskEvaluator: KS-Statistic, PSI data drift, Basel III EL/RWA
+│   └── explain.py           # ShapExplainer: Unified SHAP local explanations across all 3 models
+└── app.py                  # Streamlit Dashboard & Underwriting Simulator
 ```
 
 ---
