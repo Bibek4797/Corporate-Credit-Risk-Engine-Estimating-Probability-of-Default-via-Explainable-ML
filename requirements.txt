@@ -1,0 +1,12 @@
+pandas>=1.5.0
+numpy>=1.22.0
+scikit-learn>=1.0.0
+statsmodels>=0.13.0
+xgboost>=1.6.0
+torch>=1.12.0
+shap>=0.40.0
+streamlit>=1.15.0
+kaggle>=1.5.12
+matplotlib>=3.5.0
+plotly>=5.10.0
+scipy>=1.8.0
