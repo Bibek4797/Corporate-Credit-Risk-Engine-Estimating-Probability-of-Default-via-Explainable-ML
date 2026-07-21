@@ -24,13 +24,13 @@ class DataOrchestrator:
     # ------------------------------------------------------------------
     def load_data(
         self,
-        uploaded_file: Optional[Union[io.BytesIO, pd.DataFrame]] = None
+        uploaded_file: Optional[Union[io.BytesIO, pd.DataFrame, bytes]] = None
     ) -> Tuple[Dict[str, pd.DataFrame], str]:
         """Loads credit data from an uploaded CSV or generates synthetic data.
 
         Parameters
         ----------
-        uploaded_file : BytesIO or pd.DataFrame, optional
+        uploaded_file : BytesIO or pd.DataFrame or bytes, optional
             A file-like object from st.file_uploader, or a pre-loaded DataFrame.
             If None, falls back to Kaggle download or synthetic generation.
 
@@ -218,17 +218,12 @@ class DataOrchestrator:
     ) -> Tuple[pd.DataFrame, str]:
         """Applies fuzzy augmentation reject inference to correct selection bias.
 
-        Rejected applicants are scored by a model trained on accepted cases.
-        They are then duplicated: one copy labelled 'Good' weighted by (1-p)
-        and one labelled 'Bad' weighted by p, creating a selection-bias-corrected
-        augmented training population.
-
         Parameters
         ----------
         accepted : pd.DataFrame
             Accepted population with known default_label.
         rejected : pd.DataFrame
-            Rejected population without labels (all other features present).
+            Rejected population without labels.
 
         Returns
         -------
@@ -245,7 +240,6 @@ class DataOrchestrator:
             if c not in ["default_label", "loan_id", "ead", "lgd",
                          "macro_instrument", "grade"]
         ]
-        # Encode grade if present
         acc_enc = pd.get_dummies(
             accepted[feature_cols + ["default_label"]],
             drop_first=True
@@ -304,19 +298,69 @@ class DataOrchestrator:
     def _parse_uploaded_df(
         self, raw_df: pd.DataFrame
     ) -> Dict[str, pd.DataFrame]:
-        """Attempts to map an uploaded DataFrame to the standard schema."""
+        """Attempts to map an uploaded DataFrame to standard schema using flexible column aliases."""
         np.random.seed(self.config.random_state)
         df = raw_df.copy()
 
         # Normalise column names
         df.columns = [
-            c.lower().strip().replace(" ", "_") for c in df.columns
+            c.lower().strip().replace(" ", "_").replace("-", "_") for c in df.columns
         ]
+
+        # Column alias dictionary for flexible mapping
+        aliases = {
+            "loan_amnt": [
+                "loan_amnt", "loan_amount", "loan_size", "principal", "funded_amnt",
+                "loan_val", "amount", "borrowed", "loan_amt"
+            ],
+            "int_rate": [
+                "int_rate", "interest_rate", "rate", "interest", "apr", "int_rt", "rate_pct"
+            ],
+            "annual_inc": [
+                "annual_inc", "annual_income", "income", "salary", "earnings", "inc", "ann_inc"
+            ],
+            "dti": [
+                "dti", "dti_ratio", "debt_to_income", "debt_ratio", "debt_income_ratio"
+            ],
+            "grade": [
+                "grade", "rating", "credit_grade", "risk_grade", "score_grade", "sub_grade",
+                "gh", "rank", "tier", "class"
+            ],
+            "emp_length": [
+                "emp_length", "employment_length", "emp_len", "work_years", "employment_years", "tenure"
+            ],
+            "delinq_2yrs": [
+                "delinq_2yrs", "delinquencies", "delinq", "delinq_2yr", "late_payments", "past_due_count"
+            ],
+            "revol_util": [
+                "revol_util", "revol_utilization", "utilization", "revol_ratio", "credit_util"
+            ],
+            "inq_last_6mths": [
+                "inq_last_6mths", "inquiries", "inq_6mths", "inquiries_6m", "credit_inquiries", "inq"
+            ],
+            "default_label": [
+                "default_label", "target", "default", "is_default", "loan_status", "status",
+                "bad_flag", "default_flag", "outcome", "label"
+            ]
+        }
+
+        # Apply fuzzy alias mapping
+        rename_map = {}
+        for canonical, alias_list in aliases.items():
+            if canonical in df.columns:
+                continue
+            for col in df.columns:
+                if col in alias_list or any(a == col for a in alias_list):
+                    rename_map[col] = canonical
+                    break
+
+        if rename_map:
+            df.rename(columns=rename_map, inplace=True)
 
         n = len(df)
         if "loan_amnt"     not in df: df["loan_amnt"]     = np.random.uniform(5000, 40000, n)
         if "int_rate"      not in df: df["int_rate"]      = np.random.uniform(0.05, 0.30, n)
-        if "annual_inc"    not in df: df["annual_inc"]    = np.random.lognormal(11, 0.5, n)
+        if "annual_inc"    not in df: df["annual_inc"]    = np.random.lognormal(11, 0.5, size=n)
         if "dti"           not in df: df["dti"]           = np.random.beta(2, 5, n) * 50
         if "grade"         not in df: df["grade"]         = np.random.choice(list("ABCDEFG"), n)
         if "emp_length"    not in df: df["emp_length"]    = np.random.randint(0, 11, n)
@@ -324,12 +368,12 @@ class DataOrchestrator:
         if "revol_util"    not in df: df["revol_util"]    = np.random.beta(2, 2, n)
         if "inq_last_6mths" not in df: df["inq_last_6mths"] = np.random.poisson(0.5, n)
 
-        # Default label
+        # Handle string target mapping if default_label is string/categorical
         if "default_label" not in df:
             if "loan_status" in df:
                 df["default_label"] = df["loan_status"].apply(
                     lambda x: 1 if str(x).lower() in [
-                        "charged off", "default", "late (31-120 days)"
+                        "charged off", "default", "late (31-120 days)", "bad", "1", "yes", "true"
                     ] else 0
                 )
             else:
@@ -339,6 +383,14 @@ class DataOrchestrator:
                 logit   = -2.5 + 3.0*(df["dti"]/50) - 1.5*(np.log(df["annual_inc"]+1)-11) + 4.0*base_pd
                 prob    = 1.0 / (1.0 + np.exp(-logit))
                 df["default_label"] = (np.random.rand(n) < prob).astype(int)
+        else:
+            # Map values if default_label column itself is string/non-numeric
+            if not pd.api.types.is_numeric_dtype(df["default_label"]):
+                df["default_label"] = df["default_label"].apply(
+                    lambda x: 1 if str(x).lower() in [
+                        "charged off", "default", "late (31-120 days)", "bad", "1", "yes", "true", "y"
+                    ] else 0
+                )
 
         # EAD and LGD
         if "ead" not in df:
@@ -349,9 +401,12 @@ class DataOrchestrator:
             base_pd = df["grade"].map(grade_risk).fillna(0.07)
             df["lgd"] = np.clip(0.4 + 0.3*base_pd + np.random.normal(0, 0.05, n), 0.1, 0.9)
 
-        df["loan_id"] = np.arange(1, n + 1)
-        df["macro_indicator"]  = np.random.normal(0, 1, n)
-        df["macro_instrument"] = np.random.uniform(2, 8, n)
+        if "loan_id" not in df:
+            df["loan_id"] = np.arange(1, n + 1)
+        if "macro_indicator" not in df:
+            df["macro_indicator"] = np.random.normal(0, 1, n)
+        if "macro_instrument" not in df:
+            df["macro_instrument"] = np.random.uniform(2, 8, n)
 
         static_df = df.reset_index(drop=True)
 
