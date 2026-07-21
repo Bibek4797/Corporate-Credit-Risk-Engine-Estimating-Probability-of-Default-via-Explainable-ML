@@ -1,7 +1,7 @@
 """
-CreditRiskEngine v2 — Basel III Compliant Risk Modeling Dashboard
-=================================================================
-A production-grade Streamlit application exposing the full data science
+CreditRiskEngine — Quantitative Credit Risk & Underwriting Engine
+==================================================================
+A production-grade Streamlit application exposing the complete data science
 workflow: CSV upload → target definition → feature selection → modelling
 → diagnostics → explainability & stress testing.
 """
@@ -30,68 +30,83 @@ from src.explain      import ShapExplainer
 # Page configuration
 # ─────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="CreditRiskEngine — Basel III",
+    page_title="CreditRiskEngine",
     page_icon="🏦",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Custom CSS
+# Custom CSS (Clean, Modern, Responsive — No Overlapping)
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-  /* Inter font */
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-  html, body, [class*="st-"] { font-family: 'Inter', sans-serif; }
-
-  /* Hero gradient header */
+  /* Hero header */
   .hero-header {
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-      padding: 2rem 2.5rem;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      padding: 1.5rem 2rem;
       border-radius: 12px;
-      margin-bottom: 1.5rem;
-      color: white;
+      margin-bottom: 1.2rem;
+      color: #f8fafc;
+      border: 1px solid #334155;
   }
-  .hero-header h1 { font-size: 2rem; font-weight: 700; margin: 0; }
-  .hero-header p  { font-size: 0.95rem; opacity: 0.85; margin: 0.4rem 0 0; }
+  .hero-header h1 { font-size: 1.8rem; font-weight: 700; margin: 0; color: #ffffff; }
 
-  /* Metric cards */
-  .metric-card {
-      background: linear-gradient(135deg, #1a1a2e, #16213e);
-      border: 1px solid #2a4a6b;
+  /* Clean responsive metric cards */
+  .metric-card-clean {
+      background: #1e293b;
+      border: 1px solid #334155;
       border-radius: 10px;
-      padding: 1.2rem 1.5rem;
+      padding: 1rem 1.2rem;
       text-align: center;
-      color: white;
+      margin-bottom: 0.5rem;
   }
-  .metric-card .label { font-size: 0.75rem; color: #8ab4d4; text-transform: uppercase; letter-spacing: 1px; }
-  .metric-card .value { font-size: 2rem; font-weight: 700; margin: 0.3rem 0; }
-  .metric-card .sub   { font-size: 0.75rem; color: #aaa; }
+  .metric-card-clean .label {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.3rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+  }
+  .metric-card-clean .val-text {
+      font-size: 1.6rem;
+      font-weight: 700;
+      line-height: 1.2;
+      margin: 0.2rem 0;
+  }
+  .metric-card-clean .sub {
+      font-size: 0.75rem;
+      color: #64748b;
+  }
 
-  /* Rationale boxes */
+  /* Rationale box */
   .rationale-box {
-      background: #0d1b2a;
-      border-left: 4px solid #1e88e5;
-      padding: 0.9rem 1.2rem;
+      background: #0f172a;
+      border-left: 4px solid #3b82f6;
+      padding: 0.8rem 1rem;
       border-radius: 0 8px 8px 0;
       margin: 0.5rem 0;
       font-size: 0.88rem;
-      color: #ccc;
+      color: #cbd5e1;
+      border-top: 1px solid #1e293b;
+      border-right: 1px solid #1e293b;
+      border-bottom: 1px solid #1e293b;
   }
 
   /* Section headers */
   .section-title {
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-weight: 600;
-      color: #e0e0e0;
-      border-bottom: 2px solid #1e88e5;
-      padding-bottom: 6px;
-      margin-bottom: 1rem;
+      color: #f1f5f9;
+      border-bottom: 2px solid #3b82f6;
+      padding-bottom: 4px;
+      margin-bottom: 0.8rem;
+      margin-top: 0.5rem;
   }
-
-  /* Drop report table */
-  .drop-table-header { color: #fff; background: #1e3a5f; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -99,7 +114,7 @@ st.markdown("""
 # ─────────────────────────────────────────────────────────────────────────────
 # Pipeline runner (cached by file hash + model type)
 # ─────────────────────────────────────────────────────────────────────────────
-@st.cache_resource(show_spinner="Running full Basel III pipeline…")
+@st.cache_resource(show_spinner="Running pipeline…")
 def run_pipeline(
     file_bytes: bytes | None,
     model_engine: str
@@ -249,15 +264,15 @@ def run_pipeline(
 # Sidebar
 # ─────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 🏦 CreditRiskEngine v2")
+    st.markdown("## 🏦 CreditRiskEngine")
     st.markdown("---")
 
     # CSV upload
     st.markdown("### 📂 Data Source")
     uploaded_file = st.file_uploader(
-        "Upload your own CSV dataset",
+        "Upload Custom CSV Dataset",
         type=["csv"],
-        help="Upload a CSV with loan features. If omitted, a synthetic dataset is used.",
+        help="Upload your own credit CSV. If omitted, default dataset is used.",
         key="csv_uploader"
     )
 
@@ -266,7 +281,7 @@ with st.sidebar:
     # Model engine selector
     st.markdown("### ⚙️ Modeling Engine")
     model_engine = st.selectbox(
-        "Select PD Model",
+        "Select Model",
         ["Logistic Regression", "XGBoost", "Neural Network"],
         index=1,
         key="model_engine_select"
@@ -289,34 +304,20 @@ with st.sidebar:
 
     # Stress testing sliders
     st.markdown("---")
-    st.markdown("### 📉 Macro Stress Shocks (Tab 5)")
+    st.markdown("### 📉 Macro Stress Shocks")
     stress_income  = st.slider("Income Shock (%)", -50, 0, -20)
     stress_rate    = st.slider("Rate Shock (pp)",    0.0, 5.0, 1.5, step=0.25)
     stress_gdp     = st.slider("GDP Shock (%)",     -10, 0, -3)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Hero header
+# Clean Header
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="hero-header">
-  <h1>🏦 CreditRiskEngine: Basel III Risk Modeling &amp; Explainability</h1>
-  <p>End-to-end IRB framework: WoE/IV feature selection · VIF multicollinearity control ·
-     OLS/WLS/2SLS econometric selection · PD/LGD/EAD modeling · SHAP explainability</p>
+  <h1>🏦 CreditRiskEngine</h1>
 </div>
 """, unsafe_allow_html=True)
-
-# Basel III regulatory formula
-st.markdown(r"""
-> **Basel III Regulatory Capital (IRB Approach):** Under the Internal Ratings-Based (IRB)
-> framework, financial institutions calculate regulatory capital based on three IRB components.
-> Expected Loss is provisioned through credit impairment charges; Unexpected Loss is absorbed
-> by Common Equity Tier 1 capital:
->
-> $$EL = PD \times LGD \times EAD$$
-""")
-
-st.markdown("---")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -329,12 +330,6 @@ try:
 except Exception as exc:
     st.error(f"Pipeline failed: {exc}")
     st.stop()
-
-# Data source badge
-st.markdown(
-    f'<div class="rationale-box">📦 <b>Data Source:</b> {pipe["load_rationale"]}</div>',
-    unsafe_allow_html=True
-)
 
 # Build borrower profile from sidebar inputs
 borrower_raw = pd.DataFrame([{
@@ -393,22 +388,23 @@ with tab1:
     st.markdown('<div class="section-title">IRB Component Estimates</div>', unsafe_allow_html=True)
 
     c1, c2, c3, c4, c5 = st.columns(5)
-    pd_color  = "#ef5350" if pd_value > 0.15 else ("#ff9800" if pd_value > 0.07 else "#66bb6a")
-    el_color  = "#ef5350" if el_value > 5000  else "#ff9800"
+    pd_color  = "#ef4444" if pd_value > 0.15 else ("#f59e0b" if pd_value > 0.07 else "#10b981")
 
-    for col, label, value, fmt, note in [
-        (c1, "Probability of Default (PD)",  pd_value,  f"{pd_value*100:.2f}%", "Model output"),
-        (c2, "Loss Given Default (LGD)",      lgd_value, f"{lgd_value*100:.1f}%", "IRB F-IRB adj."),
-        (c3, "Exposure at Default (EAD)",      ead_value, f"${ead_value:,.0f}", "95% drawdown"),
-        (c4, "Expected Loss (EL)",             el_value,  f"${el_value:,.2f}", "EL = PD×LGD×EAD"),
-        (c5, "Risk-Weighted Assets (RWA)",     rwa_value, f"${rwa_value:,.0f}", "BCBS retail formula"),
-    ]:
+    cards_data = [
+        (c1, "PD",  f"{pd_value*100:.2f}%", "Probability of Default", pd_color),
+        (c2, "LGD", f"{lgd_value*100:.1f}%", "Loss Given Default", "#3b82f6"),
+        (c3, "EAD", f"${ead_value:,.0f}",    "Exposure at Default", "#3b82f6"),
+        (c4, "EL",  f"${el_value:,.2f}",     "Expected Loss", "#ef4444" if el_value > 5000 else "#f59e0b"),
+        (c5, "RWA", f"${rwa_value:,.0f}",    "Risk-Weighted Assets", "#8b5cf6"),
+    ]
+
+    for col, label, fmt_str, sub_text, color in cards_data:
         with col:
             st.markdown(f"""
-            <div class="metric-card">
+            <div class="metric-card-clean">
               <div class="label">{label}</div>
-              <div class="value" style="color:{pd_color if 'PD' in label else ('#e53935' if 'EL' in label else '#42a5f5')}">{value}</div>
-              <div class="sub">{note}</div>
+              <div class="val-text" style="color:{color}">{fmt_str}</div>
+              <div class="sub">{sub_text}</div>
             </div>""", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -429,7 +425,7 @@ with tab1:
         ).to_frame("Coefficient")
         if hasattr(pipe["econ_model"], "pvalues"):
             coeffs["p-value"] = pipe["econ_model"].pvalues
-        st.dataframe(coeffs.style.background_gradient(cmap="Blues", subset=["Coefficient"]))
+        st.dataframe(coeffs, use_container_width=True)
 
     with st.expander("🎯 Calibration Rationale"):
         st.markdown(
@@ -440,16 +436,17 @@ with tab1:
     # Risk rating gauge
     st.markdown('<div class="section-title">Risk Rating</div>', unsafe_allow_html=True)
     fig_gauge = go.Figure(go.Indicator(
-        mode="gauge+number+delta",
+        mode="gauge+number",
         value=pd_value * 100,
-        title={"text": "Probability of Default (%)"},
+        number={"suffix": "%", "valueformat": ".2f"},
+        title={"text": "Probability of Default (%)", "font": {"size": 14, "color": "#cbd5e1"}},
         gauge={
-            "axis": {"range": [0, 40]},
+            "axis": {"range": [0, 40], "tickcolor": "#94a3b8"},
             "bar":  {"color": pd_color},
             "steps": [
-                {"range": [0,   5],  "color": "#1b5e20"},
-                {"range": [5,  15],  "color": "#f9a825"},
-                {"range": [15, 40],  "color": "#b71c1c"},
+                {"range": [0,   5],  "color": "#064e3b"},
+                {"range": [5,  15],  "color": "#78350f"},
+                {"range": [15, 40],  "color": "#7f1d1d"},
             ],
             "threshold": {
                 "line": {"color": "white", "width": 3},
@@ -459,7 +456,7 @@ with tab1:
         }
     ))
     fig_gauge.update_layout(
-        height=280, paper_bgcolor="rgba(0,0,0,0)", font_color="white"
+        height=260, paper_bgcolor="rgba(0,0,0,0)", font_color="white", margin=dict(t=30, b=10, l=30, r=30)
     )
     st.plotly_chart(fig_gauge, use_container_width=True)
 
@@ -534,26 +531,35 @@ with tab3:
 
     rows = []
     for feat, reason in report.items():
-        status = "✅ Kept" if reason.startswith("Kept") else "❌ Dropped"
+        is_kept = reason.startswith("Kept")
+        status_str = "Kept" if is_kept else "Dropped"
         iv_val = woe_iv.get(feat, {}).get("iv", float("nan"))
         rows.append({
             "Feature": feat,
-            "Status":  status,
+            "Status":  status_str,
             "Reason":  reason,
-            "IV":      round(iv_val, 4) if not np.isnan(iv_val) else "N/A",
+            "IV":      round(iv_val, 4) if not np.isnan(iv_val) else None,
         })
 
-    report_df = pd.DataFrame(rows).sort_values("Status", ascending=False)
-
-    def _color_status(val):
-        if "Kept" in str(val):
-            return "background-color: #1b4332; color: #52b788;"
-        return "background-color: #3a0000; color: #ff6b6b;"
+    report_df = pd.DataFrame(rows).sort_values("Status", ascending=True)
 
     st.dataframe(
-        report_df.style.applymap(_color_status, subset=["Status"]),
+        report_df,
+        column_config={
+            "Status": st.column_config.SelectboxColumn(
+                "Status",
+                help="Feature Selection Outcome",
+                width="small",
+                options=["Kept", "Dropped"],
+            ),
+            "IV": st.column_config.NumberColumn(
+                "Information Value (IV)",
+                format="%.4f"
+            ),
+        },
         use_container_width=True,
-        height=350
+        hide_index=True,
+        height=320
     )
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -571,12 +577,12 @@ with tab3:
     )
     fig_iv.add_vline(
         x=pipe["config"].iv_threshold,
-        line_dash="dash", line_color="red", annotation_text="IV threshold"
+        line_dash="dash", line_color="#ef4444", annotation_text="IV threshold"
     )
     fig_iv.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font_color="white", height=420, yaxis_categoryorder="total ascending"
+        font_color="white", height=400, yaxis_categoryorder="total ascending"
     )
     st.plotly_chart(fig_iv, use_container_width=True)
 
@@ -595,18 +601,19 @@ with tab4:
     psi_v   = pipe["psi_value"]
 
     mc1, mc2, mc3, mc4 = st.columns(4)
-    for col, label, val, fmt in [
-        (mc1, "ROC-AUC",    roc_auc, f"{roc_auc:.4f}"),
-        (mc2, "Gini Index", gini,    f"{gini*100:.1f}%"),
-        (mc3, "KS Statistic", ks_v/100, f"{ks_v:.1f}%"),
-        (mc4, "PSI",        psi_v,   f"{psi_v:.4f}"),
-    ]:
+    diag_metrics = [
+        (mc1, "ROC-AUC",      f"{roc_auc:.4f}"),
+        (mc2, "Gini Index",   f"{gini*100:.1f}%"),
+        (mc3, "KS Statistic", f"{ks_v:.1f}%"),
+        (mc4, "PSI",          f"{psi_v:.4f}"),
+    ]
+    for col, label, fmt_str in diag_metrics:
         with col:
             st.markdown(f"""
-            <div class="metric-card">
+            <div class="metric-card-clean">
               <div class="label">{label}</div>
-              <div class="value" style="color:#42a5f5">{fmt}</div>
-              <div class="sub">Validation set</div>
+              <div class="val-text" style="color:#3b82f6">{fmt_str}</div>
+              <div class="sub">Validation Set</div>
             </div>""", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -616,7 +623,6 @@ with tab4:
     with col_ks:
         st.markdown('<div class="section-title">KS Statistic — Cumulative Distribution</div>', unsafe_allow_html=True)
         ks_df = pipe["ks_df"].copy()
-        # Use percentage of population on x-axis
         n = len(ks_df)
         ks_df["pct_pop"] = np.linspace(0, 100, n)
 
@@ -624,12 +630,12 @@ with tab4:
         fig_ks.add_trace(go.Scatter(
             x=ks_df["pct_pop"], y=ks_df["cum_pct_bads"] * 100,
             mode="lines", name="Cumulative Bads (%)",
-            line=dict(color="#ef5350", width=2.5)
+            line=dict(color="#ef4444", width=2.5)
         ))
         fig_ks.add_trace(go.Scatter(
             x=ks_df["pct_pop"], y=ks_df["cum_pct_goods"] * 100,
             mode="lines", name="Cumulative Goods (%)",
-            line=dict(color="#42a5f5", width=2.5)
+            line=dict(color="#3b82f6", width=2.5)
         ))
         fig_ks.add_trace(go.Scatter(
             x=[0, 100], y=[0, 100],
@@ -659,11 +665,11 @@ with tab4:
         fig_psi = go.Figure()
         fig_psi.add_trace(go.Bar(
             x=psi_df["bucket"], y=psi_df["expected_pct"],
-            name="Training (Expected)", marker_color="#42a5f5", opacity=0.85
+            name="Training (Expected)", marker_color="#3b82f6", opacity=0.85
         ))
         fig_psi.add_trace(go.Bar(
             x=psi_df["bucket"], y=psi_df["actual_pct"],
-            name="Validation (Actual)", marker_color="#ff9800", opacity=0.85
+            name="Validation (Actual)", marker_color="#f59e0b", opacity=0.85
         ))
         fig_psi.update_layout(
             barmode="group",
@@ -696,7 +702,7 @@ with tab5:
             top_n = shap_df.head(12)
 
             colors = [
-                "#ef5350" if v > 0 else "#42a5f5"
+                "#ef4444" if v > 0 else "#3b82f6"
                 for v in top_n["shap_value"]
             ]
             fig_shap = go.Figure(go.Bar(
@@ -715,21 +721,20 @@ with tab5:
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
                 font_color="white",
-                height=500
+                height=480
             )
             st.plotly_chart(fig_shap, use_container_width=True)
 
-            # Top-3 narrative
             top3 = shap_df.head(3)
             narrative_parts = []
             for _, row in top3.iterrows():
                 direction = "increases" if row["shap_value"] > 0 else "decreases"
                 narrative_parts.append(
                     f"**{row['feature']}** = {row['borrower_value']:.4g} "
-                    f"{direction} default risk by {abs(row['shap_value']):.4f}"
+                    f"{direction} risk by {abs(row['shap_value']):.4f}"
                 )
             st.markdown(
-                f'<div class="rationale-box">🔍 <b>Underwriting Insight:</b> '
+                f'<div class="rationale-box">🔍 <b>Key Drivers:</b> '
                 f"{' | '.join(narrative_parts)}</div>",
                 unsafe_allow_html=True
             )
@@ -737,7 +742,7 @@ with tab5:
             st.warning(f"SHAP computation unavailable: {e}")
 
     with col_stress:
-        st.markdown('<div class="section-title">📉 Macro Stress Testing (Pillar 2)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">📉 Macro Stress Testing</div>', unsafe_allow_html=True)
 
         # Apply shocks to borrower profile
         stressed_input = borrower_input.copy()
@@ -752,7 +757,7 @@ with tab5:
         try:
             stressed_pd  = float(pipe["calibrated_pd"].predict_calibrated_proba(stressed_input)[0])
             stressed_lgd = float(np.clip(pipe["risk_models"].predict_lgd(pipe["lgd_model"], stressed_input)[0], 0.05, 0.95))
-            stressed_ead = ead_value  # EAD typically held constant in stress
+            stressed_ead = ead_value
             stressed_el  = stressed_pd * stressed_lgd * stressed_ead
         except Exception:
             stressed_pd  = min(pd_value * 1.4, 0.99)
@@ -763,23 +768,23 @@ with tab5:
         el_delta   = stressed_el - el_value
         pd_delta   = stressed_pd - pd_value
 
-        # Metric cards
-        st.markdown("**Scenario Results**")
-        for label, base, stressed, fmt_fn in [
-            ("PD",      pd_value,  stressed_pd,  lambda v: f"{v*100:.2f}%"),
-            ("LGD",     lgd_value, stressed_lgd, lambda v: f"{v*100:.1f}%"),
-            ("EL ($)",  el_value,  stressed_el,  lambda v: f"${v:,.2f}"),
-        ]:
-            d = stressed - base
-            arrow = "▲" if d > 0 else "▼"
-            color = "#ef5350" if d > 0 else "#66bb6a"
+        st.markdown("**Scenario Comparison**")
+
+        sc1, sc2 = st.columns(2)
+        with sc1:
             st.markdown(f"""
-            <div class="metric-card" style="margin-bottom:0.6rem">
-              <div class="label">{label}</div>
-              <div style="display:flex;justify-content:space-between;align-items:center;color:white">
-                <span style="font-size:1.1rem">Base: <b>{fmt_fn(base)}</b></span>
-                <span style="font-size:1.1rem;color:{color}">{arrow} Stressed: <b>{fmt_fn(stressed)}</b></span>
-              </div>
+            <div class="metric-card-clean">
+              <div class="label">Base PD / EL</div>
+              <div class="val-text" style="color:#3b82f6">{pd_value*100:.2f}%</div>
+              <div class="sub">${el_value:,.2f} EL</div>
+            </div>""", unsafe_allow_html=True)
+
+        with sc2:
+            st.markdown(f"""
+            <div class="metric-card-clean">
+              <div class="label">Stressed PD / EL</div>
+              <div class="val-text" style="color:#ef4444">{stressed_pd*100:.2f}%</div>
+              <div class="sub">${stressed_el:,.2f} EL</div>
             </div>""", unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -792,7 +797,6 @@ with tab5:
         }
         sensitivities = []
         for shock_name, shock_val in shocks_applied.items():
-            # Marginal EL contribution from this single shock
             s_inp = borrower_input.copy()
             if shock_name == "Income Shock" and "annual_inc" in s_inp.columns:
                 s_inp["annual_inc"] *= (1 + shock_val / 100)
@@ -818,14 +822,14 @@ with tab5:
         fig_torn.update_layout(
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
-            font_color="white", height=250
+            font_color="white", height=240
         )
         st.plotly_chart(fig_torn, use_container_width=True)
 
         st.markdown(
             f'<div class="rationale-box">'
-            f"📊 <b>Combined Stress:</b> PD moves from {pd_value*100:.2f}% → "
+            f"📊 <b>Stress Impact:</b> PD moves from {pd_value*100:.2f}% → "
             f"{stressed_pd*100:.2f}% (+{pd_delta*100:.2f} pp). "
-            f"Expected Loss increases by ${el_delta:,.2f} under this macro scenario.</div>",
+            f"Expected Loss increases by ${el_delta:,.2f}.</div>",
             unsafe_allow_html=True
         )
