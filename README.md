@@ -1,8 +1,8 @@
-# 🏦 CreditRiskEngine: Basel III Compliant Risk Modeling & Explainability
+# 🏦 Credit Risk Modelling: End-to-End Quantitative Risk Engineering Pipeline
 
 `CreditRiskEngine` is an end-to-end, production-grade quantitative credit risk modeling, econometric analysis, and explainability pipeline built to comply with **Basel III Internal Ratings-Based (IRB)** regulatory frameworks.
 
-The entire project is structured as a fully pre-executed **Jupyter Notebook ([`CreditRiskEngine.ipynb`](file:///c:/Users/BIBEK/OneDrive/Desktop/credit%20risk%20modelling/CreditRiskEngine/CreditRiskEngine.ipynb))** executed directly on institutional credit datasets (`loan_portfolio.csv` with 50,000 corporate/retail accounts, `vintage_analysis.csv`, and `macro_stress_scenarios.csv`). All code cells, markdown descriptions, LaTeX formulas, data tables, and dark-mode visual plots are **100% pre-rendered** for immediate visualization on GitHub.
+The entire project is structured as a fully pre-executed **Jupyter Notebook ([`CreditRiskEngine.ipynb`](file:///c:/Users/BIBEK/OneDrive/Desktop/credit%20risk%20modelling/CreditRiskEngine/CreditRiskEngine.ipynb))** executed directly on institutional credit datasets (`loan_portfolio.csv` with 50,000 corporate/retail accounts, `vintage_analysis.csv`, and `macro_stress_scenarios.csv`). All code cells, rich markdown explanations, LaTeX formulas, data tables, and dark-mode visual plots are **100% pre-rendered** for immediate visualization on GitHub.
 
 ---
 
@@ -36,53 +36,41 @@ CreditRiskEngine/
 
 ---
 
-## 📋 Jupyter Notebook Section Mapping
+## 📋 The 8 Quantitative Credit Risk Modelling Steps
 
-The centerpiece notebook **`CreditRiskEngine.ipynb`** covers all quantitative workflow phases matching institutional risk dashboard tabs:
+The centerpiece notebook **`CreditRiskEngine.ipynb`** follows the **8 Formal Credit Risk Modelling Steps**:
 
-1. **System Setup & Data Ingestion**:
-   - Environment initialization (`pandas`, `numpy`, `statsmodels`, `xgboost`, `torch`, `shap`).
-   - Config setup ($VIF=5.0$, $IV=0.02$, $Window=18$ months).
-   - Ingestion of `loan_portfolio.csv` (50,000 accounts) with flexible alias mapping (`initial_rating` $\to$ `grade`, `defaulted` $\to$ `default_label`) and missing value median imputation.
-
-2. **Tab 1: 📈 Exploratory Data Analysis (EDA)**:
-   - Target class imbalance donut chart.
-   - Pearson feature correlation matrix heatmap.
-   - Bivariate default rate variations across Credit Grades and Credit Score vs Leverage scatterplot.
-
-3. **Tab 2: 🎯 Target Definition & Retrospective Analysis**:
-   - Monthly Delinquency Roll Rate transition matrix ($4 \times 4$ DPD states) justifying **90-DPD** target selection.
-   - Cohort Vintage Analysis cumulative default curves justifying the **18-month** performance window.
-
-4. **Tab 3: 🔍 Econometric Feature Selection & Auto-Regression**:
-   - Weight of Evidence (WoE) & Information Value filter ($IV < 0.02$ drop filter & IV ranking bar chart).
+1. **Step 1: Credit Risk Modelling: Define 'Bad'**:
+   - Monthly Delinquency Roll Rate transition matrix ($4 \times 4$ DPD states) & empirical justification of **90-DPD** as default threshold.
+2. **Step 2: Define Observation vs Performance Window**:
+   - Cohort Vintage Analysis cumulative default curves & empirical justification of the **18-month** performance window plateau.
+3. **Step 3: Choose Data Sources & Prepare 'Driver Set'**:
+   - Flexible column normalization (`initial_rating` $\to$ `grade`, `coupon_rate` $\to$ `int_rate`, `debt_to_equity` $\to$ `dti`, `defaulted` $\to$ `default_label`).
+   - Median missing value imputation and target class imbalance assessment.
+4. **Step 4: Feature Engineering, Weight of Evidence (WoE), IV & VIF**:
+   - Risk ratios (`leverage_to_ic`, `ead_log`).
+   - Weight of Evidence (WoE) & Information Value filter ($IV < 0.02$ drop filter & ranking bar plot).
    - Multicollinearity control via iterative Variance Inflation Factor ($VIF > 5.0$ drop filter).
-   - Formal Breusch-Pagan heteroskedasticity and Durbin-Wu-Hausman endogeneity tests.
-   - Automated selection of OLS, WLS (via FGLS), or 2SLS linear estimator.
-
-5. **Tab 4: 🤖 Model Training & Reliability Calibration**:
-   - Stratified 70/30 Train/Test dataset splitting.
-   - Model 1: Logistic Regression (Regulatory standard baseline).
-   - Model 2: XGBoost Gradient Boosted Classifier.
-   - Model 3: PyTorch Deep Neural Network (MLP).
+5. **Step 5: Choosing Modelling Technique & Calibration**:
+   - Formal Breusch-Pagan heteroskedasticity & Durbin-Wu-Hausman endogeneity tests for automated OLS/WLS/2SLS linear estimator selection.
+   - Machine Learning PD models: Logistic Regression, XGBoost Classifier, PyTorch Deep Neural Network (MLP).
    - Post-hoc Isotonic Probability Calibration & reliability histogram (Brier score evaluation).
-   - Component LGD and EAD XGBoost regressors.
-
-6. **Tab 5: 📊 Model Diagnostics & Basel III IRB Calculator**:
+   - Loss Given Default (LGD) and Exposure at Default (EAD) XGBoost regressors.
+6. **Step 6: Evaluating Model Performance & Business Impact (IRB Calculator)**:
    - Kolmogorov-Smirnov (KS) statistic ($42.6\%$) & cumulative Goods vs Bads separation curves.
    - ROC-AUC ($0.7741$) & Gini index.
-   - Population Stability Index (PSI) score drift decile bar chart ($0.0038$).
-   - Portfolio-level Expected Loss ($EL$), Vasicek Capital Requirement ($K$), and Risk-Weighted Assets ($RWA$).
-
-7. **Tab 6: 🔬 Explainability & Macroeconomic Stress Testing**:
-   - SHAP (SHapley Additive exPlanations) global feature importance beeswarm plot and local borrower waterfall plot.
-   - Integration of `macro_stress_scenarios.csv` for Pillar 2 macroeconomic downturn stress testing (Baseline, Mild Recession, Severe Recession, Stagflation) & shock impact bar chart.
-
-8. **Tab 7: 🧮 Individual Borrower Underwriting & IRB Simulator**:
+   - Portfolio-level Basel III IRB Capital Provisions ($EL = \$385.29\text{M}$, $K$, and $RWA = \$3.12\text{B}$).
+7. **Step 7: Ongoing Model Monitoring, SHAP & Stress Testing**:
+   - Population Stability Index (PSI) score drift decile bar chart ($0.0038 < 0.10$).
+   - SHAP global feature importance beeswarm plot and local borrower waterfall plot.
+   - Integration of `macro_stress_scenarios.csv` for Pillar 2 downturn stress testing (Baseline, Mild Recession, Severe Recession, Stagflation).
+8. **Step 8: Reject Inferencing**:
+   - Fuzzy Augmentation reweighting for accepted vs rejected population selection bias correction.
+9. **🧮 Single Borrower Underwriting Simulator**:
    - Programmatic credit decision engine scoring individual borrower applications and outputting $PD$, $LGD$, $EAD$, $EL$, $RWA$, CET1 capital requirement, and approval/rejection decision.
 
 ---
 
 ## ⚡ Execution Instructions
 
-Open `CreditRiskEngine.ipynb` in VS Code, JupyterLab, or Google Colab, or simply view the pre-executed notebook directly on GitHub!
+Open `CreditRiskEngine.ipynb` in VS Code, JupyterLab, or Google Colab, or view the pre-executed notebook directly on GitHub!
